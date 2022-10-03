@@ -1,22 +1,18 @@
-from sklearn.datasets import load_boston
 import pandas as pd
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-import seaborn as sns
-import statsmodels.api as sm
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.feature_selection import RFE
-from sklearn.linear_model import RidgeCV, LassoCV, Ridge, Lasso
 from sklearn import svm, tree
+from sklearn.model_selection import train_test_split 
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.feature_selection import SelectFromModel
 from enum import Enum
-
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import VarianceThreshold
 class FeatureEnums(Enum):
     SelectFromModel = 1 
-    KBest = 2
+    SelectFromVarianceThr = 2
+    Non = 3
 
 class MLModelEnums(Enum):
     DecisionTree = 1 
@@ -25,24 +21,32 @@ class MLModelEnums(Enum):
     SVM = 4
 
 class featureSelection():
-    def __init__(self, model, datasetTrain, datasetTes):
-        self.featureSelectType = FeatureEnums #Enum('SelectFromModel', 'KBest')
+    def __init__(self, model, datasetTrain, datasetTes, data):
+        self.featureSelectType = FeatureEnums
         self.trainData = datasetTrain
         self.testData = datasetTes
         self.model = model
+        self.data = data
         pass
     def runFeatureSelection(self, featrueSelectName):
+        X_new = self.trainData
+        X_newT = self.testData
         if self.featureSelectType.SelectFromModel == featrueSelectName:
             X_new, X_newT = self.selectFeatureFromModel()
+        if self.featureSelectType.SelectFromVarianceThr == featrueSelectName:
+            X_new, X_newT = self.selectVarianceThreshold() 
+
         return X_new, X_newT
     def selectFeatureFromModel(self):
         modelf = SelectFromModel(self.model, prefit=True)
         print(self.model.feature_importances_)
-        X_new = modelf.transform(self.trainData)
-        X_newT = modelf.transform(self.testData)
-        return X_new, X_newT
+        X_new = modelf.transform(self.data)
+        return X_new[:len(self.trainData)], X_new[len(self.trainData):]
 
-
+    def selectVarianceThreshold(self):
+        sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
+        X_new = sel.fit_transform(self.data)
+        return X_new[:len(self.trainData)], X_new[len(self.trainData):]
 class ML_Models():
     def __init__(self,trainX, trainY, testX, testY):
         self.modelNames = MLModelEnums #Enum('DecisionTree', 'RandomForest', 'KNearestNeighbor', 'SVM')
@@ -54,24 +58,41 @@ class ML_Models():
         pass
     def runModel(self, modelName):
         if(self.modelNames.DecisionTree == modelName):
-            acc, accT = self.DecisionTreeClassifier()
-        return acc, accT
+            self.DecisionTreeClassifier()
+        if(self.modelNames.KNearestNeighbor == modelName):
+            self.KNearestNeighborClassifier()
+        if(self.modelNames.RandomForest == modelName):
+            self.RandomForestClassifier()
+        if(self.modelNames.SVM == modelName):
+            self.SVMClassifier() 
+        return self.calPerformance()
+
     def DecisionTreeClassifier(self):
         self.model = tree.DecisionTreeClassifier()
         self.model = self.model.fit(self.trainX,self.trainY)
         #tree.plot_tree(self.model)
-        Y_PredTest = self.model.predict(self.testX)
-        Y_PredTest_Prob = self.model.predict_proba(self.testX)
-        accuracyTest = accuracy_score(self.testY, Y_PredTest) 
-        accuracyTrain = accuracy_score(self.trainY, self.model.predict(self.trainX)) 
-        return accuracyTrain, accuracyTest
-    def SVMClassifier():
-        return
-    def RandomForestClassifier():
         return 
-    def KNearestNeighborClassifier():
-        return       
 
+    def SVMClassifier(self):
+        self.model = svm.SVC()
+        self.model = self.model.fit(self.trainX,self.trainY)
+        return
+
+    def RandomForestClassifier(self):
+        self.model = RandomForestClassifier(max_depth=2, random_state=0)
+        self.model = self.model.fit(self.trainX,self.trainY)
+        return 
+
+    def KNearestNeighborClassifier(self):
+        self.model = KNeighborsClassifier(n_neighbors=3)
+        self.model = self.model.fit(self.trainX,self.trainY)
+        return 
+
+    def calPerformance(self):
+        Y_PredTest = self.model.predict(self.testX)
+        accuracyTest = accuracy_score(self.testY, Y_PredTest) 
+        accuracyTrain = accuracy_score(self.trainY, self.model.predict(self.trainX))
+        return accuracyTrain, accuracyTest
 
 def calcLabelsInDataSet(y_dataSet):
     print((['CL0'] == y_dataSet).sum()) # 11
@@ -85,7 +106,7 @@ def calcLabelsInDataSet(y_dataSet):
     print((['User'] == y_dataSet).sum()) # 167
     
 
-def convertMultiClassLabelsToBinary(y_dataSet):
+def convertMultiClassLabelsToBinaryLabels(y_dataSet):
     #convert multiclasses to binary classes
     for i in range(len(y_dataSet)):
         label = y_dataSet[i]
@@ -94,31 +115,35 @@ def convertMultiClassLabelsToBinary(y_dataSet):
         if label  == 'CL6' or label  == 'CL2' or label  == 'CL3' or label  == 'CL4' or label == 'CL5':
             y_dataSet[i] = 'User'    
 
+def ConvertMultiToBinary(y_train, y_test):
+        y_testArray = np.array(y_test)
+        y_trainArray = np.array(y_train)
+        calcLabelsInDataSet(y_trainArray)
+        calcLabelsInDataSet(y_testArray)
+        convertMultiClassLabelsToBinaryLabels(y_trainArray)
+        convertMultiClassLabelsToBinaryLabels(y_testArray)
+        calcLabelsInDataSet(y_testArray)
+        return y_trainArray, y_testArray
+
 def main():
-    featureSelectName = [FeatureEnums.SelectFromModel,FeatureEnums.KBest]
-    modelNames = ['DecisionTree', 'RandomForest', 'KNearestNeighbor', 'SVM']
+    featureSelectName = [FeatureEnums.SelectFromModel,FeatureEnums.SelectFromVarianceThr, FeatureEnums.Non]
+    modelNames = [MLModelEnums.DecisionTree, MLModelEnums.RandomForest, MLModelEnums.KNearestNeighbor, 
+    MLModelEnums.SVM]
     d = pd.read_csv("drug_consumption2.data",header=None)
     df = pd.DataFrame(d.iloc[:,:], columns = d.columns[:])
     # print(df.columns)
     train_test_data = df.iloc[:,:12]
     target_data_Alcohol = df.iloc[:,31]  
     X_train, X_test, y_train, y_test = train_test_split(train_test_data, target_data_Alcohol, train_size=0.67, random_state = 0)
-    y_testArray = np.array(y_test)
-    y_trainArray = np.array(y_train)
-    calcLabelsInDataSet(y_trainArray)
-    calcLabelsInDataSet(y_testArray)
-    convertMultiClassLabelsToBinary(y_trainArray)
-    convertMultiClassLabelsToBinary(y_testArray)
-    calcLabelsInDataSet(y_testArray)
-
+    y_trainArray, y_testArray = ConvertMultiToBinary(y_train, y_test)
     models = ML_Models(X_train, y_trainArray, X_test, y_testArray)
     fSName = featureSelectName[0]
-    mName = modelNames[0]
-    if(fSName == FeatureEnums.SelectFromModel):
-        accTrain, accTest = models.runModel(MLModelEnums.DecisionTree)
-    featureSelect = featureSelection(models.model, X_train, X_test)
-    X_trainN, X_testN = featureSelect.runFeatureSelection(FeatureEnums.SelectFromModel)
-    accTrainN, accTestN = models.runModel(MLModelEnums.DecisionTree)
+    mName = modelNames[1]
+    if(fSName == FeatureEnums.SelectFromModel and (mName == MLModelEnums.DecisionTree or mName == MLModelEnums.RandomForest)):
+        accTrain, accTest = models.runModel(mName)
+    featureSelect = featureSelection(models.model, X_train, X_test, train_test_data)
+    X_trainN, X_testN = featureSelect.runFeatureSelection(fSName)
+    accTrainN, accTestN = models.runModel(mName)
 
     return
 if __name__ == '__main__':
