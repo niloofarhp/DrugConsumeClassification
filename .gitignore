@@ -2,3 +2,4 @@ env/
 dataSet/
 *.data
 __pycache__/
+*.png
