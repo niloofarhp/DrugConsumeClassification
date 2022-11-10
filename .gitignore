@@ -1,5 +1,5 @@
 env/
-dataSet/
+DataSets/
 *.data
 __pycache__/
 *.png
