@@ -10,21 +10,19 @@ from sklearn import metrics
 from sklearn.model_selection import KFold
 from collections import Counter
 def main():
-    featureSelectName = [MLUtills.FeatureEnums.SelectFromModel,MLUtills.FeatureEnums.SelectFromVarianceThr,
-                         MLUtills.FeatureEnums.UnivariateFeature, MLUtills.FeatureEnums.Non]
-    modelNames = [MLUtills.MLModelEnums.DecisionTree, MLUtills.MLModelEnums.RandomForest, 
-                MLUtills.MLModelEnums.KNearestNeighbor, MLUtills.MLModelEnums.SVM, MLUtills.MLModelEnums.MLP,
-                MLUtills.MLModelEnums.GB]
+    featureSelectName = [MLUtills.FeatureEnums.UnivariateFeature]#[MLUtills.FeatureEnums.SelectFromVarianceThr,MLUtills.FeatureEnums.SelectFromModel,MLUtills.FeatureEnums.UnivariateFeature, MLUtills.FeatureEnums.Non]
+    modelNames = [MLUtills.MLModelEnums.DecisionTree]
+    #, MLUtills.MLModelEnums.RandomForest,MLUtills.MLModelEnums.KNearestNeighbor, MLUtills.MLModelEnums.SVM, MLUtills.MLModelEnums.MLP, MLUtills.MLModelEnums.GB]
 
     drug_names = ['alcohol 5', 'Amphetamines 1', 'Crack 1' , 'Ecstasy 1', 'Nicotine 1', 'VSA 2']
     binarizationThr = [5,1,1,1,1,2]
     targetDrugs = ['13'    ,'14'         ,'21'   ,'22'    ,'30'     ,'31']
-    dataProcess = DataProcess("/Users/niloofar/Documents/Projects/DrugConsumeClassification/DataSets/labor-negotiations.data")#drug_consumption2.data") #heart_cleveland_upload.csv")
-    useOverSample = False
+    dataProcess = DataProcess("/Users/niloofar/Documents/Projects/DrugConsumeClassification/DataSets/drug_consumption2.data")#heart_cleveland_upload.csv") #heart_cleveland_upload.csv")
+    useOverSample = True
     useUnderSample = False
     useKfold = False
     useHeartLabor = False
-    useLaborNegotiate = True 
+    useLaborNegotiate = False 
     # Ecstasy is chosen from the last HW
     for i in range(len(drug_names)):
         i = 3
@@ -38,6 +36,7 @@ def main():
         elif useUnderSample:
             X_train, y_trainArray = dataProcess.dataSetUnderSampling(X_train,y_trainArray)
         print("the target drug is :", drug_names[i] ,"*********************************************")
+        #feature_names=X_train['feature_names']
         for mName in modelNames:
             X_trainK, y_trainK, X_testK, y_testK = X_train, y_trainArray, X_test, y_testArray
             if useKfold:
@@ -55,7 +54,7 @@ def main():
                         if (mName == MLUtills.MLModelEnums.KNearestNeighbor or mName == MLUtills.MLModelEnums.SVM or mName == MLUtills.MLModelEnums.MLP) and fsName == MLUtills.FeatureEnums.SelectFromModel:
                             continue
                         models = MLUtills.ML_Models(X_train, y_train, X_test, y_test)
-                        accTrain, accTest = models.runModel(mName)
+                        ##accTrain, accTest = models.runModel(mName)
                         featureSelect = MLUtills.featureSelection(models.model, X_train, y_train, X_test)
                         X_trainN, X_testN = featureSelect.runFeatureSelection(fsName)
                         modelsF = MLUtills.ML_Models(X_trainN, y_train, X_testN, y_test)

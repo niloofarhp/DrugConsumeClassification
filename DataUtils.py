@@ -9,15 +9,16 @@ class DataProcess:
     def __init__(self, dataSetName):
         self.dataSetName = dataSetName
         self.usedatasetHeart = False
-        self.usedataLabor = True
+        self.usedataLabor = False
         pass
     def dataPreparation(self,target = 13):
         if self.usedatasetHeart:
             d = pd.read_csv(self.dataSetName)
         elif self.usedataLabor:
-            d = pd.read_csv(self.dataSetName, header=None)   
+            d = pd.read_csv(self.dataSetName)   
         else:    
             d = pd.read_csv(self.dataSetName,header=None)
+            d.columns=["ID","Age", "Gender","Education", "Country", "Ethnicity","Nscore","Escort","Oscar","Ascore","Cscore","Impulsive","SS","t13","t14","t15","t16","t17","t18","t19","t20","t21","t22","t23","t24","t25","t26","t27","t28","t29","t30","t31"]
         print(len(d.columns))
         df = pd.DataFrame(d.iloc[:,:])
         dd = df.head()
@@ -25,12 +26,16 @@ class DataProcess:
         if(self.usedatasetHeart):
             targetC = d['condition']
             train_test_data = df.drop(['condition'],axis=1)
+        elif self.usedataLabor:
+            train_test_data = df.loc[:,1:16]
+            targetC = df.loc[:,17]     
         else:        
-            train_test_data = df.loc[:,1:12]
-            targetC = df.loc[:,int(target)] 
+            attrib_columns = ["Age", "Gender","Education", "Country", "Ethnicity","Nscore","Escort","Oscar","Ascore","Cscore","Impulsive","SS"]
+            train_test_data =df.loc[:,attrib_columns]
+            targetC = df.loc[:,["t"+str(target)]] 
         scaler.fit(train_test_data)
         scaled = scaler.fit_transform(train_test_data)
-        train_test_data = pd.DataFrame(scaled)
+        train_test_data = pd.DataFrame(scaled,columns=attrib_columns)
         
         X_train, X_test, y_train, y_test = train_test_split(train_test_data, targetC, train_size=0.67, random_state = 0)
         return X_train, X_test, y_train, y_test
@@ -70,12 +75,12 @@ class DataProcess:
     def dataSetOverSampling(self,X,y):
         oversample = RandomOverSampler(sampling_strategy='minority')
         X_over, y_over = oversample.fit_resample(X, y)
-        print(Counter(y))
-        print(Counter(y_over))
+        #print(Counter(y))
+        #print(Counter(y_over))
         return  X_over, y_over      
     def dataSetUnderSampling(self,X,y):
         undersample = RandomUnderSampler(sampling_strategy='majority')
         X_under, y_under = undersample.fit_resample(X, y)
-        print(Counter(y))
-        print(Counter(y_under))
+        #print(Counter(y))
+        #print(Counter(y_under))
         return  X_under, y_under

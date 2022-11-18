@@ -3,3 +3,4 @@ DataSets/
 *.data
 __pycache__/
 *.png
+TreePics/

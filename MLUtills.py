@@ -9,7 +9,9 @@ from sklearn import svm, tree, metrics
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import confusion_matrix, accuracy_score, ConfusionMatrixDisplay
 from sklearn.ensemble import GradientBoostingClassifier
-
+from sklearn.tree import export_text
+import graphviz
+from dtreeviz.trees import *
 class FeatureEnums(Enum):
     SelectFromModel = 1 
     SelectFromVarianceThr = 2
@@ -55,12 +57,16 @@ class featureSelection():
         return X_new, X_newT
         
     def selectUnivariateFeature(self):
-        selector = SelectKBest(f_classif, k=4) 
-        selector.fit(self.trainData, self.trainDataY) 
+        selector = SelectKBest(f_classif, k=6) 
+        XX = selector.fit(self.trainData, self.trainDataY) 
         scores = -np.log10(selector.pvalues_)
         scores /= scores.max()
-        X_new = selector.fit_transform(self.trainData, self.trainDataY)
-        X_newT = selector.transform(self.testData)
+        indexes =[]
+        for i in range(6):
+            indexes.append(self.trainData.columns[scores.argmax()])
+            scores[scores.argmax()] = 0
+        X_new = pd.DataFrame(selector.fit_transform(self.trainData, self.trainDataY), columns = indexes)
+        X_newT = pd.DataFrame(selector.transform(self.testData), columns = indexes)
         return X_new, X_newT  
 
 class ML_Models():
@@ -88,9 +94,21 @@ class ML_Models():
         return self.calPerformance()
 
     def DecisionTreeClassifier(self):
-        self.model = tree.DecisionTreeClassifier()
+        self.model = tree.DecisionTreeClassifier(criterion = "entropy",max_depth=10)
         self.model = self.model.fit(self.trainX,self.trainY)
-        #tree.plot_tree(self.model)
+        r = export_text(self.model)
+        Ydata=np.zeros_like(self.trainY)
+        for i in range(len(self.trainY)):
+            if self.trainY[i] == "NonUser":
+                Ydata[i] = 0
+            else:
+                Ydata[i] = 1  
+        tree.export_graphviz(self.model,
+                            feature_names = self.trainX.columns,
+                            out_file="tree2.dot",
+                            filled = True)        
+        # by using this command we can have the png file of the tree 
+        # dot -Tpng tree2.dot -o tree_11.png
         return 
 
     def SVMClassifier(self):
